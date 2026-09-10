@@ -43,12 +43,59 @@ body {
 .감싸기 {
   max-width: 640px;
   margin: 0 auto;
-  padding: 0 16px calc(96px + env(safe-area-inset-bottom));
+  /* 위쪽은 아이폰 시계·노치를 피해서 시작합니다. */
+  padding: env(safe-area-inset-top) 16px calc(96px + env(safe-area-inset-bottom));
 }
 
 .머리 {
+  position: relative;
   text-align: center;
   padding: 30px 0 18px;
+}
+
+/* 오른쪽 위 종료 단추 */
+.종료단추 {
+  position: absolute;
+  top: 22px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 7px 13px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--흐린글자);
+  background: #fff;
+  border: 1px solid var(--선);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.종료단추:hover {
+  color: var(--진분홍);
+  border-color: var(--분홍);
+}
+.종료단추:active {
+  transform: scale(0.97);
+}
+.종료단추 span {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* 종료했을 때 보여 주는 작별 화면 */
+.작별 {
+  text-align: center;
+  padding: 90px 20px;
+}
+.작별 .그림 {
+  font-size: 56px;
+  margin-bottom: 12px;
+}
+.작별 h2 {
+  margin: 0 0 8px;
+  font-size: 21px;
 }
 .머리 h1 {
   margin: 0;
@@ -368,11 +415,21 @@ body {
   background: var(--종이);
   width: 100%;
   max-width: 640px;
-  max-height: 92vh;
-  overflow-y: auto;
+  /* 아이폰 시계 높이만큼 덜 차지해서, 머리줄이 절대 가리지 않게 합니다. */
+  max-height: calc(92vh - env(safe-area-inset-top));
   border-radius: 22px 22px 0 0;
-  padding: 20px 18px calc(26px + env(safe-area-inset-bottom));
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   animation: 올라 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+/* 머리줄은 고정, 내용만 굴러갑니다. */
+.덮개내용 {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 18px calc(26px + env(safe-area-inset-bottom));
 }
 @keyframes 올라 {
   from { transform: translateY(28px); }
@@ -390,17 +447,56 @@ body {
 .덮개머리 {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px 12px 10px;
+  background: var(--종이);
+  border-bottom: 1px solid var(--선);
+  border-radius: 22px 22px 0 0;
 }
 .덮개머리 h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
+  flex: 1;
+  text-align: center;
+  /* 제목이 길어도 단추를 밀어내지 않게 합니다. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* ← 뒤로 : 손가락으로 누르기 넉넉한 크기 */
+.뒤로 {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 8px 12px 8px 8px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--진분홍);
+  background: var(--연분홍);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.뒤로:active {
+  transform: scale(0.97);
+}
+.뒤로 span {
+  font-size: 17px;
+  line-height: 1;
+}
+
 .닫기 {
-  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 40px;
+  min-height: 40px;
   background: none;
   border: none;
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1;
   color: var(--흐린글자);
   cursor: pointer;

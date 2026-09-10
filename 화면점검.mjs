@@ -270,6 +270,65 @@ try {
     확인('댓글이 달린다', 글.includes('응원합니다'), ㄴ + ' / ' + 글.slice(-200))
   }
 
+  /* ── [4-2] 뒤로가기 ── */
+  console.log(줄바꿈 + '[4-2] 뒤로가기')
+  {
+    // 창 안에 '← 뒤로' 단추가 보이는지
+    const ㄱ = await 실행(
+      '(()=>{const 창=document.querySelector(".덮개속");if(!창)return null;' +
+        'const b=창.querySelector(".뒤로");if(!b)return null;' +
+        'const r=b.getBoundingClientRect();' +
+        'return {글:b.textContent.trim(),위:Math.round(r.top),높이:Math.round(r.height)}})()'
+    )
+    확인('창 안에 뒤로 단추가 있다', !!ㄱ, JSON.stringify(ㄱ))
+    확인('손가락으로 누를 만큼 크다', (ㄱ?.높이 || 0) >= 40, '높이 ' + ㄱ?.높이 + 'px')
+  }
+  {
+    // 닫기(×) 단추가 화면 위쪽에 잘려 있지 않은지 (아이폰 시계에 가리는 문제)
+    const ㄱ = await 실행(
+      '(()=>{const 창=document.querySelector(".덮개속");if(!창)return null;' +
+        'const b=창.querySelector(".닫기");if(!b)return null;' +
+        'const r=b.getBoundingClientRect();' +
+        'return {위:Math.round(r.top),오른쪽:Math.round(r.right),' +
+        '창너비:Math.round(window.innerWidth),보임:r.top>=0&&r.bottom<=window.innerHeight}})()'
+    )
+    확인('닫기 단추가 화면 안에 온전히 보인다', ㄱ?.보임 === true, JSON.stringify(ㄱ))
+    확인('닫기 단추가 화면 위로 잘리지 않았다', (ㄱ?.위 ?? -1) >= 0, '위쪽 ' + ㄱ?.위 + 'px')
+  }
+  {
+    // 머리줄이 내용과 함께 굴러가 사라지지 않는지 (고정되어 있어야 함)
+    await 실행('document.querySelector(".덮개내용").scrollTop = 9999')
+    await 잠깐(400)
+    const ㄱ = await 실행(
+      '(()=>{const b=document.querySelector(".덮개속 .닫기");if(!b)return null;' +
+        'const r=b.getBoundingClientRect();return r.top>=0&&r.height>0})()'
+    )
+    확인('아래로 굴려도 닫기 단추가 그대로 보인다', ㄱ === true, String(ㄱ))
+    await 실행('document.querySelector(".덮개내용").scrollTop = 0')
+    await 잠깐(300)
+  }
+  {
+    // 브라우저 뒤로가기를 눌러도 사이트를 벗어나지 않고 창만 닫혀야 합니다.
+    const 전주소 = await 실행('location.pathname')
+    await 실행('history.back()')
+    await 잠깐(900)
+    const ㄱ = await 실행('!!document.querySelector(".덮개속")')
+    const 후주소 = await 실행('location.pathname')
+    const 글 = await 글자들()
+    확인('뒤로가기를 누르면 창이 닫힌다', ㄱ === false, '창이 아직 열려 있습니다')
+    확인('뒤로가기로 사이트를 벗어나지 않는다', 후주소 === 전주소 && 글.includes('마음 우체통'), 후주소)
+  }
+  {
+    // 다시 열어서 다음 검사를 이어 갑니다.
+    await 실행(
+      '(()=>{const ㄱ=[...document.querySelectorAll("article")].find(x=>x.textContent.includes(' +
+        JSON.stringify(표시) + '));if(ㄱ)ㄱ.click();return!!ㄱ})()'
+    )
+    await 잠깐(1200)
+    const 글 = await 글자들()
+    확인('글을 다시 열 수 있다', 글.includes('응원 한마디'), 글.slice(0, 120))
+  }
+
   /* ── [5] 지우기 ── */
   console.log(줄바꿈 + '[5] 내가 쓴 글 지우기')
   {

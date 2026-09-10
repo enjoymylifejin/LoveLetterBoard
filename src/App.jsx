@@ -29,6 +29,7 @@ export default function App() {
   const [쓰기열림, 쓰기열림바꾸기] = useState(false)
   const [열린글, 열린글바꾸기] = useState(null)
   const [소식, 소식바꾸기] = useState('')
+  const [끝냄, 끝냄바꾸기] = useState(false)
 
   // 늦게 온 응답이 최신 목록을 덮어쓰지 않도록 순번을 매깁니다.
   const 세대 = useRef(0)
@@ -90,6 +91,47 @@ export default function App() {
     )
   }
 
+  /**
+   * 종료하기
+   * ------------------------------------------------------------
+   * 앱으로 설치해서 쓰는 중이면 창이 그대로 닫힙니다.
+   * 브라우저 탭에서는 규칙상 페이지가 스스로 탭을 닫을 수 없어서,
+   * 대신 작별 화면을 보여 주고 멈춥니다.
+   */
+  function 종료하기() {
+    if (!confirm('마음 우체통을 종료할까요?')) return
+    끝냄바꾸기(true)
+    try {
+      window.close()
+    } catch {
+      /* 못 닫아도 아래 작별 화면이 뜹니다. */
+    }
+  }
+
+  if (끝냄) {
+    return (
+      <div className="감싸기">
+        <div className="작별">
+          <div className="그림">💌</div>
+          <h2>안녕히 가세요</h2>
+          <p className="흐리게">
+            남겨 주신 마음은 잘 보관해 둘게요.
+            <br />
+            창을 닫으셔도 됩니다.
+          </p>
+          <button
+            className="단추 주"
+            style={{ marginTop: 16 }}
+            onClick={() => 끝냄바꾸기(false)}
+            type="button"
+          >
+            다시 열기
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   function 글지워짐(id) {
     글들바꾸기((이전) => 이전.filter((ㄱ) => ㄱ.id !== id))
     전체바꾸기((이전) => Math.max(0, 이전 - 1))
@@ -101,6 +143,9 @@ export default function App() {
   return (
     <div className="감싸기">
       <header className="머리">
+        <button className="종료단추" onClick={종료하기} type="button">
+          <span aria-hidden="true">✕</span> 종료
+        </button>
         <h1>💌 마음 우체통</h1>
         <p className="풀이">
           이름 없이 남기는 마음. 지금까지 {전체}통의 편지가 도착했어요.
