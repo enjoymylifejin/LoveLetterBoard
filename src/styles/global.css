@@ -1,0 +1,447 @@
+/* ============================================================
+   마음 우체통 - 전체 모양
+   ============================================================ */
+:root {
+  --바탕: #fff7fa;
+  --바탕2: #ffeef4;
+  --종이: #ffffff;
+  --글자: #3d2b33;
+  --흐린글자: #957985;
+  --선: #f4dde6;
+  --분홍: #ff5f95;
+  --진분홍: #e8306f;
+  --연분홍: #ffe3ec;
+  --보라: #8b6dd6;
+  --그림자: 0 6px 22px rgba(217, 118, 155, 0.13);
+  --둥글: 18px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: linear-gradient(180deg, var(--바탕2) 0%, var(--바탕) 340px);
+  background-attachment: fixed;
+  color: var(--글자);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 15px;
+  line-height: 1.62;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* ── 틀 ─────────────────────────────────────────── */
+.감싸기 {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px calc(96px + env(safe-area-inset-bottom));
+}
+
+.머리 {
+  text-align: center;
+  padding: 30px 0 18px;
+}
+.머리 h1 {
+  margin: 0;
+  font-size: 25px;
+  letter-spacing: -0.5px;
+  font-weight: 800;
+}
+.머리 .풀이 {
+  margin: 6px 0 0;
+  color: var(--흐린글자);
+  font-size: 13.5px;
+}
+
+/* ── 종이(카드) ──────────────────────────────────── */
+.종이 {
+  background: var(--종이);
+  border: 1px solid var(--선);
+  border-radius: var(--둥글);
+  box-shadow: var(--그림자);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.글카드 {
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.글카드:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(217, 118, 155, 0.2);
+}
+.글카드:active {
+  transform: translateY(0);
+}
+
+.카드머리 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.별명 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--보라);
+}
+.때 {
+  font-size: 12px;
+  color: var(--흐린글자);
+  margin-left: auto;
+}
+.받는이 {
+  font-size: 12.5px;
+  color: var(--진분홍);
+  background: var(--연분홍);
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.본문 {
+  white-space: pre-wrap;
+  margin: 0;
+  font-size: 15px;
+}
+.더보기 {
+  color: var(--분홍);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.카드바닥 {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--선);
+  font-size: 13px;
+  color: var(--흐린글자);
+}
+
+/* ── 마음 딱지 ───────────────────────────────────── */
+.딱지 {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--연분홍);
+  color: var(--진분홍);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ── 단추 ───────────────────────────────────────── */
+.단추 {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--글자);
+  background: #fff;
+  border: 1px solid var(--선);
+  border-radius: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+.단추:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+.단추:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.단추:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.단추.주 {
+  background: linear-gradient(135deg, #ff6fa2, #ff4f87);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(255, 95, 149, 0.36);
+}
+.단추.작게 {
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+.단추.글자만 {
+  background: none;
+  border: none;
+  color: var(--흐린글자);
+  padding: 6px 4px;
+  font-weight: 600;
+}
+.단추.가득 {
+  width: 100%;
+}
+
+.하트단추 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--흐린글자);
+  cursor: pointer;
+  padding: 2px 0;
+}
+.하트단추.눌림 {
+  color: var(--진분홍);
+}
+.하트단추:disabled {
+  cursor: default;
+}
+.하트단추 .뛰기 {
+  display: inline-block;
+  animation: 콩 0.42s ease;
+}
+@keyframes 콩 {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+
+/* ── 입력 ───────────────────────────────────────── */
+.라벨 {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--흐린글자);
+  margin: 14px 0 6px;
+}
+.입력,
+.여러줄 {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--글자);
+  background: #fffdfe;
+  border: 1px solid var(--선);
+  border-radius: 12px;
+  padding: 11px 13px;
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.입력:focus,
+.여러줄:focus {
+  border-color: var(--분홍);
+  box-shadow: 0 0 0 3px rgba(255, 95, 149, 0.13);
+}
+.여러줄 {
+  min-height: 138px;
+  resize: vertical;
+  line-height: 1.65;
+}
+.글자수 {
+  text-align: right;
+  font-size: 12px;
+  color: var(--흐린글자);
+  margin-top: 4px;
+}
+
+.고르기줄 {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.고르기 {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--선);
+  background: #fff;
+  color: var(--흐린글자);
+  cursor: pointer;
+}
+.고르기.켬 {
+  background: var(--분홍);
+  border-color: var(--분홍);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(255, 95, 149, 0.3);
+}
+
+/* ── 띠 (정렬·검색) ──────────────────────────────── */
+.띠 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.찾기칸 {
+  flex: 1;
+  min-width: 130px;
+}
+
+/* ── 알림 ───────────────────────────────────────── */
+.알림 {
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 10px 0;
+}
+.알림.나쁨 {
+  background: #ffe9ee;
+  color: #c62a55;
+}
+.알림.좋음 {
+  background: #e6f9f0;
+  color: #14855c;
+}
+.알림.정보 {
+  background: #f2eeff;
+  color: #5f49a8;
+}
+
+.비었음 {
+  text-align: center;
+  padding: 54px 20px;
+  color: var(--흐린글자);
+}
+.비었음 .그림 {
+  font-size: 46px;
+  margin-bottom: 10px;
+}
+
+/* ── 아래 고정 단추 ──────────────────────────────── */
+.쓰기단추 {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 20;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 26px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #ff6fa2, #ff4f87);
+  box-shadow: 0 8px 24px rgba(232, 48, 111, 0.4);
+  cursor: pointer;
+}
+.쓰기단추:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+/* ── 덮개(글쓰기·상세) ───────────────────────────── */
+.덮개 {
+  position: fixed;
+  inset: 0;
+  background: rgba(61, 43, 51, 0.42);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: 스르 0.18s ease;
+}
+@keyframes 스르 {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.덮개속 {
+  background: var(--종이);
+  width: 100%;
+  max-width: 640px;
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: 22px 22px 0 0;
+  padding: 20px 18px calc(26px + env(safe-area-inset-bottom));
+  animation: 올라 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes 올라 {
+  from { transform: translateY(28px); }
+  to { transform: translateY(0); }
+}
+@media (min-width: 700px) {
+  .덮개 {
+    align-items: center;
+  }
+  .덮개속 {
+    border-radius: 22px;
+    max-height: 86vh;
+  }
+}
+.덮개머리 {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.덮개머리 h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.닫기 {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--흐린글자);
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* ── 댓글 ───────────────────────────────────────── */
+.댓글 {
+  border-top: 1px dashed var(--선);
+  padding: 11px 0 4px;
+}
+.댓글:first-of-type {
+  border-top: none;
+}
+.댓글 .속 {
+  margin: 3px 0 0;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+/* ── 바닥 ───────────────────────────────────────── */
+.바닥 {
+  text-align: center;
+  color: var(--흐린글자);
+  font-size: 12px;
+  padding: 26px 0 10px;
+  line-height: 1.9;
+}
+
+.가운데 {
+  text-align: center;
+}
+.흐리게 {
+  color: var(--흐린글자);
+  font-size: 13px;
+}
+
+/* 눈이 편하도록 움직임을 줄여 달라고 한 사람에겐 애니메이션을 끕니다. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

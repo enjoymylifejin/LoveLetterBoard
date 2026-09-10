@@ -1,0 +1,8 @@
+node_modules
+dist
+.data
+.vercel
+
+# 회사 모니터링 프로그램이 %programdata% 를 못 풀어서
+# 작업 폴더에 남기는 로그입니다. 올리면 안 됩니다.
+%programdata%/
