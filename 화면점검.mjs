@@ -218,6 +218,12 @@ try {
     const ㄱ = await 누르기('이 마음 남기기')
     확인('내용 없이는 못 보낸다', ㄱ === '잠김', ㄱ)
   }
+  {
+    const 글 = await 글자들()
+    확인('1000자까지 쓸 수 있다고 알려 준다', /\/ 1000/.test(글), 글.slice(0, 200))
+    const ㄱ = await 실행('document.querySelector("#내용칸").maxLength')
+    확인('입력칸도 1000자까지 받는다', ㄱ === 1000, String(ㄱ))
+  }
   await 적기('#내용칸', 표시 + ' 오래 마음에 담아 두었던 이야기를 여기에 남깁니다.')
   await 적기('#받는이칸', '창가 그분')
   await 잠깐(300)
@@ -329,10 +335,60 @@ try {
     확인('글을 다시 열 수 있다', 글.includes('응원 한마디'), 글.slice(0, 120))
   }
 
+  /* ── [4-3] 내가 쓴 글 고치기 ── */
+  console.log(줄바꿈 + '[4-3] 내가 쓴 글 고치기')
+  {
+    const ㄱ = await 창안에서누르기('✏️ 고치기')
+    await 잠깐(700)
+    확인('고치기 칸이 열린다', ㄱ === 'ok', ㄱ)
+    const 글 = await 글자들()
+    확인('고치기 칸에도 1000자 안내가 있다', /\/ 1000/.test(글), 글.slice(-300))
+  }
+  {
+    // 내용을 바꾸고 저장합니다.
+    const ㄱ = await 실행(
+      '(()=>{const 창=document.querySelector(".덮개속");if(!창)return"창없음";' +
+        'const t=창.querySelector("textarea");if(!t)return"칸없음";' +
+        'const s=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,"value").set;' +
+        's.call(t,' + JSON.stringify(표시 + ' 고쳐서 바뀐 내용입니다.') + ');' +
+        't.dispatchEvent(new Event("input",{bubbles:true}));return"ok"})()'
+    )
+    확인('고칠 내용을 적을 수 있다', ㄱ === 'ok', ㄱ)
+  }
+  {
+    const ㄱ = await 실행(
+      '(()=>{const 창=document.querySelector(".덮개속");' +
+        'const 칸들=[...창.querySelectorAll("input[inputmode=numeric]")];' +
+        'const el=칸들[칸들.length-1];if(!el)return"칸없음";' +
+        'const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,"value").set;' +
+        's.call(el,"0000");el.dispatchEvent(new Event("input",{bubbles:true}));return"ok"})()'
+    )
+    await 잠깐(300)
+    await 창안에서누르기('고친 내용 저장')
+    await 잠깐(1600)
+    const 글 = await 글자들()
+    확인('틀린 숫자로는 못 고친다', /맞지 않/.test(글), 글.slice(-250))
+  }
+  {
+    const ㄱ = await 실행(
+      '(()=>{const 창=document.querySelector(".덮개속");' +
+        'const 칸들=[...창.querySelectorAll("input[inputmode=numeric]")];' +
+        'const el=칸들[칸들.length-1];if(!el)return"칸없음";' +
+        'const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,"value").set;' +
+        's.call(el,"4321");el.dispatchEvent(new Event("input",{bubbles:true}));return"ok"})()'
+    )
+    await 잠깐(300)
+    await 창안에서누르기('고친 내용 저장')
+    await 잠깐(1800)
+    const 글 = await 글자들()
+    확인('맞는 숫자로 고쳐진다', 글.includes('고쳐서 바뀐 내용'), 글.slice(0, 300))
+    확인('고침 표시가 붙는다', /· 고침/.test(글), 글.slice(0, 200))
+  }
+
   /* ── [5] 지우기 ── */
   console.log(줄바꿈 + '[5] 내가 쓴 글 지우기')
   {
-    const ㄱ = await 창안에서누르기('🗑 내가 쓴 글 지우기')
+    const ㄱ = await 창안에서누르기('🗑 지우기')
     await 잠깐(500)
     확인('지우기 칸이 열린다', ㄱ === 'ok', ㄱ)
   }

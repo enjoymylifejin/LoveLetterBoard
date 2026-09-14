@@ -45,9 +45,12 @@ async function 부르기(동작, { 검색 = {}, 몸 = null } = {}) {
 export const 서버확인 = () => 부르기('ping')
 export const 마음목록 = () => 부르기('tags')
 
-export const 글목록 = ({ 정렬 = 'new', 태그 = '', 찾기 = '', 자리 = 0 } = {}) =>
+export const 글목록 = ({ 정렬 = 'new', 태그 = '', 찾기 = '', 자리 = 0, 휴지통 = false } = {}) =>
   부르기('list', {
-    검색: { sort: 정렬, tag: 태그, q: 찾기, from: 자리, key: 관리자열쇠() },
+    검색: {
+      sort: 정렬, tag: 태그, q: 찾기, from: 자리,
+      key: 관리자열쇠(), trash: 휴지통 ? '1' : '',
+    },
   })
 
 export const 글보기 = (id) => 부르기('post', { 검색: { id, key: 관리자열쇠() } })
@@ -60,6 +63,9 @@ export const 댓글쓰기 = (id, 내용) => 부르기('comment', { 몸: { id, �
 export const 신고하기 = (id) => 부르기('report', { 몸: { id } })
 export const 글지우기 = (id, 비번) => 부르기('remove', { 몸: { id, 비번 } })
 
+export const 글고치기 = (id, { 내용, 받는이, 태그, 비번 }) =>
+  부르기('edit', { 몸: { id, 내용, 받는이, 태그, 비번 } })
+
 /* ── 관리자 ─────────────────────────────────────── */
 export const 관리자들어가기 = (비번) => 부르기('admin_in', { 몸: { 비번 } })
 export const 관리자확인 = () => 부르기('admin_check', { 몸: { 열쇠: 관리자열쇠() } })
@@ -68,3 +74,7 @@ export const 관리자글지우기 = (id) =>
   부르기('admin_remove', { 몸: { 열쇠: 관리자열쇠(), id } })
 export const 관리자글보이기 = (id) =>
   부르기('admin_show', { 몸: { 열쇠: 관리자열쇠(), id } })
+export const 관리자되살리기 = (id) =>
+  부르기('admin_restore', { 몸: { 열쇠: 관리자열쇠(), id } })
+export const 관리자아주지우기 = (id) =>
+  부르기('admin_purge', { 몸: { 열쇠: 관리자열쇠(), id } })

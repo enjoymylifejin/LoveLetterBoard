@@ -10,7 +10,7 @@ import { 내글기억 } from '../lib/나.js'
 import { 마음들 } from '../lib/시각.js'
 import { 덮개, 알림 } from './공통.jsx'
 
-const 내용최대 = 600
+const 내용최대 = 1000
 const 받는이최대 = 20
 
 export default function 글쓰기({ 닫기, 다썼을때 }) {

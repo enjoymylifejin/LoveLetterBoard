@@ -4,7 +4,10 @@
  * 로그인 없이, 이름 없이 마음을 남기는 곳입니다.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { 글목록, 관리자확인, 관리자나가기, 관리자글지우기, 관리자글보이기 } from './lib/서버.js'
+import {
+  글목록, 관리자확인, 관리자나가기, 관리자글지우기, 관리자글보이기,
+  관리자되살리기 as 서버되살리기, 관리자아주지우기,
+} from './lib/서버.js'
 import { 흐른시간, 마음들 } from './lib/시각.js'
 import { 하트눌렀나, 내글인가, 관리자열쇠, 관리자열쇠저장, 관리자열쇠지움 } from './lib/나.js'
 import { 마음딱지, 알림, 비었음 } from './components/공통.jsx'
@@ -32,6 +35,7 @@ export default function App() {
   const [소식, 소식바꾸기] = useState('')
   const [관리자창, 관리자창바꾸기] = useState(false)
   const [관리자임, 관리자임바꾸기] = useState(() => Boolean(관리자열쇠()))
+  const [휴지통, 휴지통바꾸기] = useState(false)
 
   // 늦게 온 응답이 최신 목록을 덮어쓰지 않도록 순번을 매깁니다.
   const 세대 = useRef(0)
@@ -41,7 +45,7 @@ export default function App() {
     부르는중바꾸기(true)
     잘못바꾸기('')
     try {
-      const ㄱ = await 글목록({ 정렬, 태그, 찾기, 자리: 0 })
+      const ㄱ = await 글목록({ 정렬, 태그, 찾기, 자리: 0, 휴지통 })
       if (내차례 !== 세대.current) return
       글들바꾸기(ㄱ.글들 || [])
       다음바꾸기(ㄱ.다음 ?? null)
@@ -51,7 +55,7 @@ export default function App() {
     } finally {
       if (내차례 === 세대.current) 부르는중바꾸기(false)
     }
-  }, [정렬, 태그, 찾기])
+  }, [정렬, 태그, 찾기, 휴지통])
 
   useEffect(() => {
     불러오기()
@@ -68,7 +72,7 @@ export default function App() {
     const 내차례 = 세대.current
     더부르는중바꾸기(true)
     try {
-      const ㄱ = await 글목록({ 정렬, 태그, 찾기, 자리: 다음 })
+      const ㄱ = await 글목록({ 정렬, 태그, 찾기, 자리: 다음, 휴지통 })
       if (내차례 !== 세대.current) return
       글들바꾸기((이전) => {
         // 같은 글이 두 번 들어가지 않게 걸러 냅니다.
@@ -120,6 +124,33 @@ export default function App() {
     }
   }
 
+  /** 관리자 : 휴지통에서 되살립니다. */
+  async function 휴지통에서되살리기(ㄱ, 일) {
+    일.stopPropagation()
+    try {
+      await 서버되살리기(ㄱ.id)
+      글들바꾸기((이전) => 이전.filter((ㄴ) => ㄴ.id !== ㄱ.id))
+      소식바꾸기('글을 되살렸습니다.')
+      setTimeout(() => 소식바꾸기(''), 2600)
+    } catch (ㅇ) {
+      잘못바꾸기(ㅇ.message)
+    }
+  }
+
+  /** 관리자 : 되돌릴 수 없게 아주 지웁니다. */
+  async function 아주지우기(ㄱ, 일) {
+    일.stopPropagation()
+    if (!confirm('되돌릴 수 없습니다. 정말 아주 지울까요?')) return
+    try {
+      await 관리자아주지우기(ㄱ.id)
+      글들바꾸기((이전) => 이전.filter((ㄴ) => ㄴ.id !== ㄱ.id))
+      소식바꾸기('완전히 지웠습니다.')
+      setTimeout(() => 소식바꾸기(''), 2600)
+    } catch (ㅇ) {
+      잘못바꾸기(ㅇ.message)
+    }
+  }
+
   async function 관리자나감() {
     try {
       await 관리자나가기()
@@ -128,7 +159,7 @@ export default function App() {
     }
     관리자열쇠지움()
     관리자임바꾸기(false)
-    불러오기()
+    휴지통바꾸기(false)
   }
 
   function 글지워짐(id) {
@@ -204,7 +235,14 @@ export default function App() {
 
       {관리자임 && (
         <div className="관리자띠">
-          <span>🔑 관리자 모드 — 어떤 글이든 지울 수 있습니다</span>
+          <span>🔑 관리자 모드</span>
+          <button
+            className={'단추 작게' + (휴지통 ? ' 주' : '')}
+            onClick={() => 휴지통바꾸기((이전) => !이전)}
+            type="button"
+          >
+            {휴지통 ? '📋 보통 목록' : '🗑 휴지통'}
+          </button>
           <button className="단추 작게" onClick={관리자나감} type="button">
             나가기
           </button>
@@ -225,8 +263,21 @@ export default function App() {
 
       {!부르는중 && 글들.length === 0 && !잘못 && (
         <비었음
-          제목={찾기 || 태그 ? '찾는 마음이 없어요' : '아직 도착한 편지가 없어요'}
-          풀이={찾기 || 태그 ? '다른 낱말로 찾아보세요.' : '첫 마음을 남겨 보세요.'}
+          그림={휴지통 ? '🗑' : '💌'}
+          제목={
+            휴지통
+              ? '휴지통이 비어 있어요'
+              : 찾기 || 태그
+                ? '찾는 마음이 없어요'
+                : '아직 도착한 편지가 없어요'
+          }
+          풀이={
+            휴지통
+              ? '지워진 글이 여기에 모입니다.'
+              : 찾기 || 태그
+                ? '다른 낱말로 찾아보세요.'
+                : '첫 마음을 남겨 보세요.'
+          }
         />
       )}
 
@@ -252,6 +303,11 @@ export default function App() {
                 가려짐 · 신고 {ㄱ.신고 || 0}
               </span>
             )}
+            {ㄱ.지움 && (
+              <span className="받는이" style={{ background: '#e8e4e6', color: '#6b5b63' }}>
+                지워짐 · {흐른시간(ㄱ.지운시각)}
+              </span>
+            )}
             <span className="때">{흐른시간(ㄱ.만든시각)}</span>
           </div>
 
@@ -269,22 +325,43 @@ export default function App() {
 
             {관리자임 && (
               <span className="관리자칸">
-                {ㄱ.숨김 && (
-                  <button
-                    className="단추 작게"
-                    onClick={(일) => 관리자되살리기(ㄱ, 일)}
-                    type="button"
-                  >
-                    되살리기
-                  </button>
+                {휴지통 ? (
+                  <>
+                    <button
+                      className="단추 작게"
+                      onClick={(일) => 휴지통에서되살리기(ㄱ, 일)}
+                      type="button"
+                    >
+                      ↩ 되살리기
+                    </button>
+                    <button
+                      className="단추 작게 지움"
+                      onClick={(일) => 아주지우기(ㄱ, 일)}
+                      type="button"
+                    >
+                      아주 지우기
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {ㄱ.숨김 && (
+                      <button
+                        className="단추 작게"
+                        onClick={(일) => 관리자되살리기(ㄱ, 일)}
+                        type="button"
+                      >
+                        보이게
+                      </button>
+                    )}
+                    <button
+                      className="단추 작게 지움"
+                      onClick={(일) => 관리자지우기(ㄱ, 일)}
+                      type="button"
+                    >
+                      🗑 지우기
+                    </button>
+                  </>
                 )}
-                <button
-                  className="단추 작게 지움"
-                  onClick={(일) => 관리자지우기(ㄱ, 일)}
-                  type="button"
-                >
-                  🗑 지우기
-                </button>
               </span>
             )}
           </div>

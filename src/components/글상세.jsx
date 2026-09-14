@@ -3,9 +3,9 @@
  * 전체 내용, 응원 한마디, 하트, 신고, (내 글이면) 지우기
  */
 import { useEffect, useState } from 'react'
-import { 글보기, 하트보내기, 댓글쓰기, 신고하기, 글지우기 } from '../lib/서버.js'
+import { 글보기, 하트보내기, 댓글쓰기, 신고하기, 글지우기, 글고치기 } from '../lib/서버.js'
 import { 하트눌렀나, 하트기억, 내글인가, 내글잊기 } from '../lib/나.js'
-import { 흐른시간 } from '../lib/시각.js'
+import { 흐른시간, 마음들 } from '../lib/시각.js'
 import { 덮개, 마음딱지, 알림 } from './공통.jsx'
 
 export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때 }) {
@@ -20,6 +20,13 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
 
   const [댓글, 댓글바꾸기] = useState('')
   const [댓글보내는중, 댓글보내는중바꾸기] = useState(false)
+
+  const [고치기열림, 고치기열림바꾸기] = useState(false)
+  const [고칠내용, 고칠내용바꾸기] = useState('')
+  const [고칠받는이, 고칠받는이바꾸기] = useState('')
+  const [고칠태그, 고칠태그바꾸기] = useState('')
+  const [고칠비번, 고칠비번바꾸기] = useState('')
+  const [고치는중, 고치는중바꾸기] = useState(false)
 
   const [지우기열림, 지우기열림바꾸기] = useState(false)
   const [지울비번, 지울비번바꾸기] = useState('')
@@ -95,6 +102,38 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
     }
   }
 
+  function 고치기시작() {
+    고칠내용바꾸기(글?.내용 || '')
+    고칠받는이바꾸기(글?.받는이 || '')
+    고칠태그바꾸기(글?.태그 || 마음들[0].키)
+    고칠비번바꾸기('')
+    알림글바꾸기('')
+    고치기열림바꾸기(true)
+    지우기열림바꾸기(false)
+  }
+
+  async function 고치기저장() {
+    if (고칠내용.trim().length < 5 || !/^[0-9]{4}$/.test(고칠비번) || 고치는중) return
+    고치는중바꾸기(true)
+    알림글바꾸기('')
+    try {
+      const ㄱ = await 글고치기(id, {
+        내용: 고칠내용,
+        받는이: 고칠받는이,
+        태그: 고칠태그,
+        비번: 고칠비번,
+      })
+      글바꾸기(ㄱ.글)
+      고치기열림바꾸기(false)
+      알림글바꾸기('고쳤습니다.')
+      바뀌었을때?.({ id, 고침: true })
+    } catch (ㅇ) {
+      알림글바꾸기(ㅇ.message)
+    } finally {
+      고치는중바꾸기(false)
+    }
+  }
+
   async function 지우기() {
     if (!/^[0-9]{4}$/.test(지울비번)) return
     지우는중바꾸기(true)
@@ -119,7 +158,10 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
           <div className="카드머리">
             <span className="별명">{글.별명}</span>
             {글.받는이 && <span className="받는이">→ {글.받는이}</span>}
-            <span className="때">{흐른시간(글.만든시각)}</span>
+            <span className="때">
+              {흐른시간(글.만든시각)}
+              {글.고친시각 ? ' · 고침' : ''}
+            </span>
           </div>
 
           <div style={{ marginBottom: 10 }}>
@@ -144,12 +186,84 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
             </button>
           </div>
 
-          {내가쓴글 && (
+          {내가쓴글 && 고치기열림 && (
+            <div className="종이" style={{ marginTop: 12, background: '#fffdfe' }}>
+              <label className="라벨" style={{ marginTop: 0 }}>
+                어떤 마음인가요?
+              </label>
+              <div className="고르기줄">
+                {마음들.map((ㅁ) => (
+                  <button
+                    key={ㅁ.키}
+                    type="button"
+                    className={'고르기' + (고칠태그 === ㅁ.키 ? ' 켬' : '')}
+                    onClick={() => 고칠태그바꾸기(ㅁ.키)}
+                  >
+                    {ㅁ.그림} {ㅁ.이름}
+                  </button>
+                ))}
+              </div>
+
+              <label className="라벨">누구에게 (선택)</label>
+              <input
+                className="입력"
+                value={고칠받는이}
+                maxLength={20}
+                onChange={(e) => 고칠받는이바꾸기(e.target.value)}
+              />
+
+              <label className="라벨">하고 싶은 말</label>
+              <textarea
+                className="여러줄"
+                value={고칠내용}
+                maxLength={1000}
+                onChange={(e) => 고칠내용바꾸기(e.target.value)}
+              />
+              <div className="글자수">
+                {고칠내용.length} / 1000
+              </div>
+
+              <label className="라벨">쓸 때 정한 숫자 4자리</label>
+              <input
+                className="입력"
+                value={고칠비번}
+                inputMode="numeric"
+                maxLength={4}
+                autoComplete="off"
+                onChange={(e) => 고칠비번바꾸기(e.target.value.replace(/[^0-9]/g, ''))}
+              />
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button
+                  className="단추 주 작게"
+                  onClick={고치기저장}
+                  disabled={고칠내용.trim().length < 5 || !/^[0-9]{4}$/.test(고칠비번) || 고치는중}
+                  type="button"
+                >
+                  {고치는중 ? '고치는 중…' : '고친 내용 저장'}
+                </button>
+                <button
+                  className="단추 작게"
+                  onClick={() => 고치기열림바꾸기(false)}
+                  type="button"
+                >
+                  그만두기
+                </button>
+              </div>
+            </div>
+          )}
+
+          {내가쓴글 && !고치기열림 && (
             <div style={{ marginTop: 12 }}>
               {!지우기열림 ? (
-                <button className="단추 작게" onClick={() => 지우기열림바꾸기(true)} type="button">
-                  🗑 내가 쓴 글 지우기
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="단추 작게" onClick={고치기시작} type="button">
+                    ✏️ 고치기
+                  </button>
+                  <button className="단추 작게" onClick={() => 지우기열림바꾸기(true)} type="button">
+                    🗑 지우기
+                  </button>
+                </div>
               ) : (
                 <div className="종이" style={{ marginBottom: 0, background: '#fffdfe' }}>
                   <label className="라벨" style={{ marginTop: 0 }}>

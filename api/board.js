@@ -22,7 +22,7 @@ import {
 } from './_저장소.js'
 
 /* ── 설정값 ───────────────────────────────────────── */
-const 내용최대 = 600
+const 내용최대 = 1000
 const 받는이최대 = 20
 const 댓글최대 = 200
 const 목록한번에 = 20
@@ -67,6 +67,7 @@ const 신고키 = (id) => 'report:' + id
 const 최신표 = 'z:new'
 const 인기표 = 'z:hot'
 const 태그표 = (태그) => 'z:tag:' + 태그
+const 휴지통표 = 'z:trash' // 지워진 글. 관리자만 볼 수 있습니다.
 
 /* ── 도우미 ───────────────────────────────────────── */
 const 새번호 = () => Date.now().toString(36) + crypto.randomBytes(4).toString('hex')
@@ -100,6 +101,17 @@ function 손님번호(몸) {
   return ㄱ.length >= 8 ? ㄱ : null
 }
 
+/** 글에 적어 둔 숫자 4자리가 맞는지 봅니다. */
+function 비번맞나(글, 비번) {
+  try {
+    const 넣은것 = Buffer.from(비번굳히기(비번, 글.소금), 'hex')
+    const 저장된것 = Buffer.from(String(글.비번), 'hex')
+    return 넣은것.length === 저장된것.length && crypto.timingSafeEqual(넣은것, 저장된것)
+  } catch {
+    return false
+  }
+}
+
 /** 건네받은 열쇠가 살아 있는 관리자 열쇠인지 봅니다. */
 async function 관리자인가(열쇠) {
   const ㄱ = String(열쇠 || '').replace(/[^a-zA-Z0-9]/g, '')
@@ -107,11 +119,38 @@ async function 관리자인가(열쇠) {
   return Boolean(await 값읽기(관리자키(ㄱ)))
 }
 
-/** 글 하나와 딸린 것들을 모두 지웁니다. */
-async function 글지우기(글) {
+/**
+ * 글을 휴지통으로 보냅니다.
+ * 목록에서는 바로 사라지지만, 관리자는 나중에 볼 수 있고 되살릴 수도 있습니다.
+ * 댓글과 하트도 그대로 두어, 되살리면 함께 돌아옵니다.
+ */
+async function 휴지통으로(글) {
+  글.지움 = true
+  글.지운시각 = Date.now()
+  await 값넣기(글키(글.id), 글)
+  await 순위빼기(최신표, 글.id)
+  await 순위빼기(인기표, 글.id)
+  await 순위빼기(태그표(글.태그), 글.id)
+  await 순위넣기(휴지통표, 글.지운시각, 글.id)
+}
+
+/** 휴지통에서 꺼내 원래 자리로 돌려놓습니다. */
+async function 휴지통에서꺼내기(글) {
+  글.지움 = false
+  글.지운시각 = null
+  await 값넣기(글키(글.id), 글)
+  await 순위빼기(휴지통표, 글.id)
+  await 순위넣기(최신표, 글.만든시각, 글.id)
+  await 순위넣기(태그표(글.태그), 글.만든시각, 글.id)
+  await 순위넣기(인기표, (글.하트 || 0) + 글.만든시각 / 1e13, 글.id)
+}
+
+/** 되돌릴 수 없게 완전히 없앱니다. (관리자만) */
+async function 아주지우기(글) {
   await 값지우기(글키(글.id), 댓글키(글.id), 하트키(글.id), 신고키(글.id))
   await 순위빼기(최신표, 글.id)
   await 순위빼기(인기표, 글.id)
+  await 순위빼기(휴지통표, 글.id)
   await 순위빼기(태그표(글.태그), 글.id)
 }
 
@@ -136,8 +175,9 @@ function 요약(글) {
     만든시각: 글.만든시각,
     하트: 글.하트 || 0,
     댓글수: 글.댓글수 || 0,
-    맛보기: String(글.내용 || '').slice(0, 90),
-    긴글: String(글.내용 || '').length > 90,
+    맛보기: String(글.내용 || '').slice(0, 120),
+    긴글: String(글.내용 || '').length > 120,
+    고친시각: 글.고친시각 || null,
   }
 }
 
@@ -174,7 +214,15 @@ export default async function handler(요청, 답장) {
       // 관리자는 신고로 가려진 글까지 볼 수 있습니다.
       const 관리자 = await 관리자인가(요청.query?.key)
 
-      const 표 = 마음키들.includes(태그) ? 태그표(태그) : 정렬 === 'hot' ? 인기표 : 최신표
+      // 관리자가 trash=1 을 주면 지워진 글만 봅니다.
+      const 휴지통보기 = 관리자 && String(요청.query?.trash || '') === '1'
+      const 표 = 휴지통보기
+        ? 휴지통표
+        : 마음키들.includes(태그)
+          ? 태그표(태그)
+          : 정렬 === 'hot'
+            ? 인기표
+            : 최신표
 
       // 검색할 때는 넓게 훑고, 아니면 필요한 만큼만 읽습니다.
       const 읽을시작 = 찾기 ? 0 : 자리
@@ -192,9 +240,19 @@ export default async function handler(요청, 답장) {
             return null
           }
         })
-        .filter((ㄱ) => ㄱ && (관리자 || !ㄱ.숨김))
+        .filter((ㄱ) => ㄱ && (관리자 || (!ㄱ.숨김 && !ㄱ.지움)))
 
-      let 결과 = 글들.map((ㄱ) => (관리자 ? { ...요약(ㄱ), 숨김: !!ㄱ.숨김, 신고: ㄱ.신고 || 0 } : 요약(ㄱ)))
+      let 결과 = 글들.map((ㄱ) =>
+        관리자
+          ? {
+              ...요약(ㄱ),
+              숨김: !!ㄱ.숨김,
+              신고: ㄱ.신고 || 0,
+              지움: !!ㄱ.지움,
+              지운시각: ㄱ.지운시각 || null,
+            }
+          : 요약(ㄱ)
+      )
 
       if (찾기) {
         결과 = 결과.filter(
@@ -203,7 +261,9 @@ export default async function handler(요청, 답장) {
             String(ㄱ.받는이 || '').toLowerCase().includes(찾기)
         )
       }
-      if (다시정렬필요 || 찾기) {
+      if (휴지통보기) {
+        결과.sort((ㄱ, ㄴ) => (ㄴ.지운시각 || 0) - (ㄱ.지운시각 || 0))
+      } else if (다시정렬필요 || 찾기) {
         결과.sort((ㄱ, ㄴ) =>
           정렬 === 'hot'
             ? ㄴ.하트 - ㄱ.하트 || ㄴ.만든시각 - ㄱ.만든시각
@@ -228,7 +288,9 @@ export default async function handler(요청, 답장) {
 
       const 글 = await 글꺼내기(id)
       if (!글) return 오류('이미 지워졌거나 없는 글입니다.', 404)
-      if (글.숨김 && !(await 관리자인가(요청.query?.key))) {
+      const 보는이관리자 = await 관리자인가(요청.query?.key)
+      if (글.지움 && !보는이관리자) return 오류('이미 지워진 글입니다.', 404)
+      if (글.숨김 && !보는이관리자) {
         return 오류('신고가 쌓여 가려진 글입니다.', 403)
       }
 
@@ -249,8 +311,9 @@ export default async function handler(요청, 답장) {
     /* 여기부터는 글을 바꾸는 기능이라 POST 로만 받습니다.
        (없는 기능이면 방식을 따지기 전에 없다고 알려 줍니다) */
     const 쓰는기능 = [
-      'write', 'heart', 'comment', 'report', 'remove',
+      'write', 'edit', 'heart', 'comment', 'report', 'remove',
       'admin_in', 'admin_out', 'admin_check', 'admin_remove', 'admin_show',
+      'admin_restore', 'admin_purge',
     ]
     if (!쓰는기능.includes(동작)) {
       return 오류('없는 기능입니다 : ' + (동작 || '(빈 값)'), 404)
@@ -309,7 +372,7 @@ export default async function handler(요청, 답장) {
       if (!손님 || !id) return 오류('잘못된 요청입니다.')
 
       const 글 = await 글꺼내기(id)
-      if (!글) return 오류('없는 글입니다.', 404)
+      if (!글 || 글.지움) return 오류('없는 글입니다.', 404)
 
       const 처음 = await 집합에넣기(하트키(id), 손님)
       if (!처음) return 오류('이미 마음을 보냈어요.', 409)
@@ -330,7 +393,7 @@ export default async function handler(요청, 답장) {
       if (내용.length < 2) return 오류('두 글자 이상 적어 주세요.')
 
       const 글 = await 글꺼내기(id)
-      if (!글) return 오류('없는 글입니다.', 404)
+      if (!글 || 글.지움) return 오류('없는 글입니다.', 404)
       if (글.숨김) return 오류('가려진 글입니다.', 403)
 
       const 댓글 = { id: 새번호(), 별명: 별명만들기(), 내용, 만든시각: Date.now() }
@@ -349,7 +412,7 @@ export default async function handler(요청, 답장) {
       if (!손님 || !id) return 오류('잘못된 요청입니다.')
 
       const 글 = await 글꺼내기(id)
-      if (!글) return 오류('없는 글입니다.', 404)
+      if (!글 || 글.지움) return 오류('없는 글입니다.', 404)
 
       const 처음 = await 집합에넣기(신고키(id), 손님)
       if (!처음) return 오류('이미 신고한 글입니다.', 409)
@@ -361,6 +424,37 @@ export default async function handler(요청, 답장) {
       return 보내기({ 접수: true, 숨김: 글.숨김 })
     }
 
+    /* ── 고치기 (쓸 때 정한 숫자 4자리) ── */
+    if (동작 === 'edit') {
+      const id = 아이디다듬기(몸.id)
+      const 비번 = String(몸.비번 || '')
+      if (!id || !/^[0-9]{4}$/.test(비번)) return 오류('숫자 4자리를 입력해 주세요.')
+
+      const 글 = await 글꺼내기(id)
+      if (!글 || 글.지움) return 오류('이미 지워진 글입니다.', 404)
+      if (!비번맞나(글, 비번)) return 오류('숫자가 맞지 않습니다.', 403)
+
+      const 내용 = 다듬기(몸.내용, 내용최대)
+      if (내용.length < 5) return 오류('마음을 다섯 글자 이상 적어 주세요.')
+      const 받는이 = 다듬기(몸.받는이, 받는이최대)
+      const 새태그 = 마음키들.includes(몸.태그) ? 몸.태그 : 글.태그
+
+      // 마음 태그를 바꿨으면 태그별 목록에서도 옮겨 줍니다.
+      if (새태그 !== 글.태그) {
+        await 순위빼기(태그표(글.태그), id)
+        await 순위넣기(태그표(새태그), 글.만든시각, id)
+      }
+
+      글.내용 = 내용
+      글.받는이 = 받는이
+      글.태그 = 새태그
+      글.고친시각 = Date.now()
+      await 값넣기(글키(id), 글)
+
+      const { 비번: ㄱ, 소금: ㄴ, 신고: ㄷ, ...보여줄것 } = 글
+      return 보내기({ 고침: true, 글: 보여줄것 })
+    }
+
     /* ── 지우기 (쓸 때 정한 숫자 4자리) ── */
     if (동작 === 'remove') {
       const id = 아이디다듬기(몸.id)
@@ -368,15 +462,11 @@ export default async function handler(요청, 답장) {
       if (!id || !/^[0-9]{4}$/.test(비번)) return 오류('숫자 4자리를 입력해 주세요.')
 
       const 글 = await 글꺼내기(id)
-      if (!글) return 오류('이미 지워진 글입니다.', 404)
+      if (!글 || 글.지움) return 오류('이미 지워진 글입니다.', 404)
 
-      const 넣은것 = Buffer.from(비번굳히기(비번, 글.소금), 'hex')
-      const 저장된것 = Buffer.from(String(글.비번), 'hex')
-      const 맞나 =
-        넣은것.length === 저장된것.length && crypto.timingSafeEqual(넣은것, 저장된것)
-      if (!맞나) return 오류('숫자가 맞지 않습니다.', 403)
+      if (!비번맞나(글, 비번)) return 오류('숫자가 맞지 않습니다.', 403)
 
-      await 글지우기(글)
+      await 휴지통으로(글)
       return 보내기({ 지움: true })
     }
 
@@ -415,9 +505,30 @@ export default async function handler(요청, 답장) {
       if (!(await 관리자인가(몸.열쇠))) return 오류('관리자만 할 수 있습니다.', 403)
       const id = 아이디다듬기(몸.id)
       const 글 = await 글꺼내기(id)
-      if (!글) return 오류('이미 지워진 글입니다.', 404)
-      await 글지우기(글)
+      if (!글 || 글.지움) return 오류('이미 지워진 글입니다.', 404)
+      await 휴지통으로(글)
       return 보내기({ 지움: true })
+    }
+
+    /* ── 관리자 : 휴지통에서 되살리기 ── */
+    if (동작 === 'admin_restore') {
+      if (!(await 관리자인가(몸.열쇠))) return 오류('관리자만 할 수 있습니다.', 403)
+      const id = 아이디다듬기(몸.id)
+      const 글 = await 글꺼내기(id)
+      if (!글) return 오류('없는 글입니다.', 404)
+      if (!글.지움) return 오류('지워진 글이 아닙니다.')
+      await 휴지통에서꺼내기(글)
+      return 보내기({ 되살림: true })
+    }
+
+    /* ── 관리자 : 아주 지우기 (되돌릴 수 없음) ── */
+    if (동작 === 'admin_purge') {
+      if (!(await 관리자인가(몸.열쇠))) return 오류('관리자만 할 수 있습니다.', 403)
+      const id = 아이디다듬기(몸.id)
+      const 글 = await 글꺼내기(id)
+      if (!글) return 오류('없는 글입니다.', 404)
+      await 아주지우기(글)
+      return 보내기({ 아주지움: true })
     }
 
     /* ── 관리자 : 가려진 글 다시 보이게 하기 ── */
