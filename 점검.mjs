@@ -11,6 +11,13 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+/* 관리자 비밀번호
+   내 컴퓨터에서 점검할 때는 코드 기본값(2580)이 그대로 쓰입니다.
+   운영 서버처럼 ADMIN_PW 를 따로 정해 둔 곳을 점검할 때는
+   같은 값을 환경변수로 넘겨 주세요.
+     예) ADMIN_PW=내비번 node 관리자점검.mjs */
+const 관리자비번 = process.env.ADMIN_PW || '2580'
+
 const 스스로 = process.argv.includes('--직접')
 const 포트 = Number(process.env.PORT || (스스로 ? 5188 : 5180))
 const 바탕 = 'http://localhost:' + 포트
@@ -262,7 +269,7 @@ try {
     확인('틀린 관리자 비번은 막힌다', ㄱ.코드 === 403, JSON.stringify(ㄱ.값))
   }
   {
-    const ㄱ = await 부르기('admin_in', { 몸: { 비번: '2580' } })
+    const ㄱ = await 부르기('admin_in', { 몸: { 비번: 관리자비번 } })
     확인('2580 으로 관리자에 들어간다', ㄱ.코드 === 200 && !!ㄱ.값?.열쇠, JSON.stringify(ㄱ.값))
     열쇠 = ㄱ.값?.열쇠
     확인('열쇠가 추측하기 어렵게 길다', (열쇠 || '').length >= 40, '길이 ' + (열쇠 || '').length)
@@ -413,7 +420,7 @@ try {
   console.log(줄바꿈 + '[12] 휴지통')
   let 열쇠2 = null
   {
-    const ㄱ = await 부르기('admin_in', { 몸: { 비번: '2580' } })
+    const ㄱ = await 부르기('admin_in', { 몸: { 비번: 관리자비번 } })
     열쇠2 = ㄱ.값?.열쇠
     확인('관리자로 들어간다', !!열쇠2)
   }

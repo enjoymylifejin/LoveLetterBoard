@@ -4,6 +4,13 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+/* 관리자 비밀번호
+   내 컴퓨터에서 점검할 때는 코드 기본값(2580)이 그대로 쓰입니다.
+   운영 서버처럼 ADMIN_PW 를 따로 정해 둔 곳을 점검할 때는
+   같은 값을 환경변수로 넘겨 주세요.
+     예) ADMIN_PW=내비번 node 관리자점검.mjs */
+const 관리자비번 = process.env.ADMIN_PW || '2580'
+
 const 주소 = process.env.GOBAEK_URL || 'http://localhost:5180/'
 const 포트 = 9884
 const 잠깐 = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -101,12 +108,12 @@ try {
     확인('틀린 비번은 막힌다', /맞지 않/.test(글), 글.slice(0, 200))
   }
   {
-    await 적기('#관리자비번칸', '2580')
+    await 적기('#관리자비번칸', 관리자비번)
     await 잠깐(300)
     await 창안에서누르기('들어가기')
     await 잠깐(2200)
     const 글 = await 글자들()
-    확인('2580 으로 들어가진다', 글.includes('관리자 모드'), 글.slice(0, 220))
+    확인('맞는 비번으로 들어가진다', 글.includes('관리자 모드'), 글.slice(0, 220))
   }
 
   console.log(줄바꿈 + '[4] 관리자가 글 지우기')
