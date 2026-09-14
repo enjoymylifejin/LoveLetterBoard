@@ -151,6 +151,50 @@ try {
     확인('화면이 깨지지 않았다', !/undefined|NaN|\[object/.test(글))
   }
 
+  /* ── [1-2] 새로고침 단추 ── */
+  console.log(줄바꿈 + '[1-2] 새로고침 단추')
+  {
+    const ㄱ = await 실행(
+      '(()=>{const b=document.querySelector(".새로고침단추");if(!b)return null;' +
+        'const r=b.getBoundingClientRect();' +
+        'return {있음:true,너비:Math.round(r.width),높이:Math.round(r.height),' +
+        '이름:b.getAttribute("aria-label")}})()'
+    )
+    확인('메인에 새로고침 단추가 있다', !!ㄱ, JSON.stringify(ㄱ))
+    확인('손가락으로 누를 만큼 크다', (ㄱ?.높이 || 0) >= 36 && (ㄱ?.너비 || 0) >= 36,
+         JSON.stringify(ㄱ))
+    확인('무슨 단추인지 알려 준다', ㄱ?.이름 === '새로고침', ㄱ?.이름)
+  }
+  {
+    // 서버에 글을 하나 몰래 넣고, 새로고침을 눌러야 보이는지 봅니다.
+    const 몰래 = '몰래' + Math.random().toString(36).slice(2, 7)
+    const ㄱ = await 실행(
+      '(async()=>{const r=await fetch("/api/board?do=write",{method:"POST",' +
+        'headers:{"content-type":"application/json"},' +
+        'body:JSON.stringify({손님:"sneak"+Math.random().toString(36).slice(2,12),' +
+        '내용:' + JSON.stringify('몰래 넣은 글입니다 ') + '+' + JSON.stringify(몰래) + ',' +
+        '태그:"seolem",비번:"9090"})});return (await r.json())})()'
+    )
+    확인('몰래 글을 하나 넣었다', !!ㄱ?.id, JSON.stringify(ㄱ))
+
+    const 전 = await 글자들()
+    확인('새로고침 전에는 안 보인다', !전.includes(몰래))
+
+    await 실행('document.querySelector(".새로고침단추").click(); true')
+    await 잠깐(1800)
+    const 후 = await 글자들()
+    확인('새로고침을 누르면 새 글이 나타난다', 후.includes(몰래), 후.slice(0, 200))
+
+    // 치우기 (점검용 글은 지웁니다)
+    if (ㄱ?.id) {
+      await 실행(
+        '(async()=>{await fetch("/api/board?do=remove",{method:"POST",' +
+          'headers:{"content-type":"application/json"},' +
+          'body:JSON.stringify({id:' + JSON.stringify(ㄱ.id) + ',비번:"9090"})});return 1})()'
+      )
+    }
+  }
+
   /* ── [2] 설치(바탕화면 아이콘) 준비물 ── */
   console.log(줄바꿈 + '[2] 바탕화면 아이콘 준비물')
   {
@@ -335,14 +379,14 @@ try {
     확인('글을 다시 열 수 있다', 글.includes('응원 한마디'), 글.slice(0, 120))
   }
 
-  /* ── [4-3] 내가 쓴 글 고치기 ── */
-  console.log(줄바꿈 + '[4-3] 내가 쓴 글 고치기')
+  /* ── [4-3] 내가 쓴 글 수정하기 ── */
+  console.log(줄바꿈 + '[4-3] 내가 쓴 글 수정하기')
   {
-    const ㄱ = await 창안에서누르기('✏️ 고치기')
+    const ㄱ = await 창안에서누르기('✏️ 수정하기')
     await 잠깐(700)
-    확인('고치기 칸이 열린다', ㄱ === 'ok', ㄱ)
+    확인('수정 칸이 열린다', ㄱ === 'ok', ㄱ)
     const 글 = await 글자들()
-    확인('고치기 칸에도 1000자 안내가 있다', /\/ 1000/.test(글), 글.slice(-300))
+    확인('수정 칸에도 1000자 안내가 있다', /\/ 1000/.test(글), 글.slice(-300))
   }
   {
     // 내용을 바꾸고 저장합니다.
@@ -364,10 +408,10 @@ try {
         's.call(el,"0000");el.dispatchEvent(new Event("input",{bubbles:true}));return"ok"})()'
     )
     await 잠깐(300)
-    await 창안에서누르기('고친 내용 저장')
+    await 창안에서누르기('수정 저장')
     await 잠깐(1600)
     const 글 = await 글자들()
-    확인('틀린 숫자로는 못 고친다', /맞지 않/.test(글), 글.slice(-250))
+    확인('틀린 숫자로는 수정이 안 된다', /맞지 않/.test(글), 글.slice(-250))
   }
   {
     const ㄱ = await 실행(
@@ -378,11 +422,11 @@ try {
         's.call(el,"4321");el.dispatchEvent(new Event("input",{bubbles:true}));return"ok"})()'
     )
     await 잠깐(300)
-    await 창안에서누르기('고친 내용 저장')
+    await 창안에서누르기('수정 저장')
     await 잠깐(1800)
     const 글 = await 글자들()
-    확인('맞는 숫자로 고쳐진다', 글.includes('고쳐서 바뀐 내용'), 글.slice(0, 300))
-    확인('고침 표시가 붙는다', /· 고침/.test(글), 글.slice(0, 200))
+    확인('맞는 숫자로 수정된다', 글.includes('고쳐서 바뀐 내용'), 글.slice(0, 300))
+    확인('수정됨 표시가 붙는다', /· 수정됨/.test(글), 글.slice(0, 200))
   }
 
   /* ── [5] 지우기 ── */

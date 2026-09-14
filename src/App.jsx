@@ -173,6 +173,17 @@ export default function App() {
   return (
     <div className="감싸기">
       <header className="머리">
+        <button
+          className={'새로고침단추' + (부르는중 ? ' 도는중' : '')}
+          onClick={() => 불러오기()}
+          disabled={부르는중}
+          type="button"
+          title="새로고침"
+          aria-label="새로고침"
+        >
+          <span aria-hidden="true">🔄</span>
+        </button>
+
         {!관리자임 && (
           <button
             className="관리자단추"

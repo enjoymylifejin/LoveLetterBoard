@@ -53,6 +53,44 @@ body {
   padding: 30px 0 18px;
 }
 
+/* 왼쪽 위 새로고침 단추 */
+.새로고침단추 {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 15px;
+  color: var(--흐린글자);
+  background: #fff;
+  border: 1px solid var(--선);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.새로고침단추:hover:not(:disabled) {
+  border-color: var(--분홍);
+}
+.새로고침단추:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.새로고침단추:disabled {
+  cursor: default;
+}
+/* 불러오는 동안 빙글빙글 돕니다. */
+.새로고침단추.도는중 span {
+  display: inline-block;
+  animation: 빙글 0.9s linear infinite;
+}
+@keyframes 빙글 {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 오른쪽 위 관리자 단추 */
 .관리자단추 {
   position: absolute;

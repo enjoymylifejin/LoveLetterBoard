@@ -1,6 +1,6 @@
 /**
  * 글 하나 펼쳐 보기
- * 전체 내용, 응원 한마디, 하트, 신고, (내 글이면) 지우기
+ * 전체 내용, 응원 한마디, 하트, 신고, (내 글이면) 수정하기·지우기
  */
 import { useEffect, useState } from 'react'
 import { 글보기, 하트보내기, 댓글쓰기, 신고하기, 글지우기, 글고치기 } from '../lib/서버.js'
@@ -125,7 +125,7 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
       })
       글바꾸기(ㄱ.글)
       고치기열림바꾸기(false)
-      알림글바꾸기('고쳤습니다.')
+      알림글바꾸기('수정했습니다.')
       바뀌었을때?.({ id, 고침: true })
     } catch (ㅇ) {
       알림글바꾸기(ㅇ.message)
@@ -160,7 +160,7 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
             {글.받는이 && <span className="받는이">→ {글.받는이}</span>}
             <span className="때">
               {흐른시간(글.만든시각)}
-              {글.고친시각 ? ' · 고침' : ''}
+              {글.고친시각 ? ' · 수정됨' : ''}
             </span>
           </div>
 
@@ -240,7 +240,7 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
                   disabled={고칠내용.trim().length < 5 || !/^[0-9]{4}$/.test(고칠비번) || 고치는중}
                   type="button"
                 >
-                  {고치는중 ? '고치는 중…' : '고친 내용 저장'}
+                  {고치는중 ? '수정하는 중…' : '수정 저장'}
                 </button>
                 <button
                   className="단추 작게"
@@ -258,7 +258,7 @@ export default function 글상세({ id, 닫기, 바뀌었을때, 지워졌을때
               {!지우기열림 ? (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="단추 작게" onClick={고치기시작} type="button">
-                    ✏️ 고치기
+                    ✏️ 수정하기
                   </button>
                   <button className="단추 작게" onClick={() => 지우기열림바꾸기(true)} type="button">
                     🗑 지우기
