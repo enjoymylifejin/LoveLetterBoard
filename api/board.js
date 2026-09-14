@@ -28,6 +28,14 @@ const 댓글최대 = 200
 const 목록한번에 = 20
 const 검색범위 = 300 // 검색할 때 훑어볼 최근 글 수
 const 신고숨김 = 3 // 신고가 이만큼 쌓이면 자동으로 가려집니다
+
+/* 관리자 비밀번호
+   ------------------------------------------------------------
+   저장소가 공개라서 여기 적힌 값은 누구나 볼 수 있습니다.
+   Vercel 의 Settings > Environment Variables 에서 ADMIN_PW 를 넣으면
+   그 값이 대신 쓰이고, 코드를 고칠 필요가 없습니다. */
+const 관리자비번 = process.env.ADMIN_PW || '2580'
+const 관리자유효 = 12 * 60 * 60 // 초. 한 번 들어가면 12시간 유지됩니다.
 const 글쓰기간격 = 20 // 초. 같은 사람이 연달아 도배하지 못하게
 
 const 마음들 = [
@@ -52,6 +60,7 @@ const 이름말 = [
 
 /* ── 저장소 열쇠 이름 (영문·숫자만) ─────────────────── */
 const 글키 = (id) => 'post:' + id
+const 관리자키 = (열쇠) => 'admin:' + 열쇠
 const 댓글키 = (id) => 'cmt:' + id
 const 하트키 = (id) => 'heart:' + id
 const 신고키 = (id) => 'report:' + id
@@ -89,6 +98,21 @@ function 별명만들기() {
 function 손님번호(몸) {
   const ㄱ = String(몸?.손님 || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 40)
   return ㄱ.length >= 8 ? ㄱ : null
+}
+
+/** 건네받은 열쇠가 살아 있는 관리자 열쇠인지 봅니다. */
+async function 관리자인가(열쇠) {
+  const ㄱ = String(열쇠 || '').replace(/[^a-zA-Z0-9]/g, '')
+  if (ㄱ.length < 20) return false
+  return Boolean(await 값읽기(관리자키(ㄱ)))
+}
+
+/** 글 하나와 딸린 것들을 모두 지웁니다. */
+async function 글지우기(글) {
+  await 값지우기(글키(글.id), 댓글키(글.id), 하트키(글.id), 신고키(글.id))
+  await 순위빼기(최신표, 글.id)
+  await 순위빼기(인기표, 글.id)
+  await 순위빼기(태그표(글.태그), 글.id)
 }
 
 /** 저장된 글을 꺼냅니다. */
@@ -147,6 +171,8 @@ export default async function handler(요청, 답장) {
       const 태그 = String(요청.query?.tag || '')
       const 찾기 = 다듬기(요청.query?.q || '', 30).toLowerCase()
       const 자리 = Math.max(0, Number(요청.query?.from || 0) || 0)
+      // 관리자는 신고로 가려진 글까지 볼 수 있습니다.
+      const 관리자 = await 관리자인가(요청.query?.key)
 
       const 표 = 마음키들.includes(태그) ? 태그표(태그) : 정렬 === 'hot' ? 인기표 : 최신표
 
@@ -166,9 +192,9 @@ export default async function handler(요청, 답장) {
             return null
           }
         })
-        .filter((ㄱ) => ㄱ && !ㄱ.숨김)
+        .filter((ㄱ) => ㄱ && (관리자 || !ㄱ.숨김))
 
-      let 결과 = 글들.map(요약)
+      let 결과 = 글들.map((ㄱ) => (관리자 ? { ...요약(ㄱ), 숨김: !!ㄱ.숨김, 신고: ㄱ.신고 || 0 } : 요약(ㄱ)))
 
       if (찾기) {
         결과 = 결과.filter(
@@ -202,7 +228,9 @@ export default async function handler(요청, 답장) {
 
       const 글 = await 글꺼내기(id)
       if (!글) return 오류('이미 지워졌거나 없는 글입니다.', 404)
-      if (글.숨김) return 오류('신고가 쌓여 가려진 글입니다.', 403)
+      if (글.숨김 && !(await 관리자인가(요청.query?.key))) {
+        return 오류('신고가 쌓여 가려진 글입니다.', 403)
+      }
 
       const 댓글들 = (await 줄읽기(댓글키(id), 200))
         .map((ㄱ) => {
@@ -220,7 +248,10 @@ export default async function handler(요청, 답장) {
 
     /* 여기부터는 글을 바꾸는 기능이라 POST 로만 받습니다.
        (없는 기능이면 방식을 따지기 전에 없다고 알려 줍니다) */
-    const 쓰는기능 = ['write', 'heart', 'comment', 'report', 'remove']
+    const 쓰는기능 = [
+      'write', 'heart', 'comment', 'report', 'remove',
+      'admin_in', 'admin_out', 'admin_check', 'admin_remove', 'admin_show',
+    ]
     if (!쓰는기능.includes(동작)) {
       return 오류('없는 기능입니다 : ' + (동작 || '(빈 값)'), 404)
     }
@@ -345,12 +376,61 @@ export default async function handler(요청, 답장) {
         넣은것.length === 저장된것.length && crypto.timingSafeEqual(넣은것, 저장된것)
       if (!맞나) return 오류('숫자가 맞지 않습니다.', 403)
 
-      await 값지우기(글키(id), 댓글키(id), 하트키(id), 신고키(id))
-      await 순위빼기(최신표, id)
-      await 순위빼기(인기표, id)
-      await 순위빼기(태그표(글.태그), id)
-
+      await 글지우기(글)
       return 보내기({ 지움: true })
+    }
+
+      /* ══════════ 관리자 ══════════ */
+
+    /* ── 관리자로 들어가기 ── */
+    if (동작 === 'admin_in') {
+      const 넣은것 = Buffer.from(String(몸.비번 || ''), 'utf-8')
+      const 진짜 = Buffer.from(관리자비번, 'utf-8')
+      const 맞나 =
+        넣은것.length === 진짜.length && crypto.timingSafeEqual(넣은것, 진짜)
+      // 마구 찔러 보는 것을 늦추기 위해 잠깐 쉽니다.
+      if (!맞나) {
+        await new Promise((ㄱ) => setTimeout(ㄱ, 700))
+        return 오류('비밀번호가 맞지 않습니다.', 403)
+      }
+      const 열쇠 = crypto.randomBytes(24).toString('hex')
+      await 값넣기(관리자키(열쇠), '1', 관리자유효)
+      return 보내기({ 열쇠, 유효시간: 관리자유효 })
+    }
+
+    /* ── 아직 관리자인지 확인 ── */
+    if (동작 === 'admin_check') {
+      return 보내기({ 관리자: await 관리자인가(몸.열쇠) })
+    }
+
+    /* ── 관리자에서 나가기 ── */
+    if (동작 === 'admin_out') {
+      const ㄱ = String(몸.열쇠 || '').replace(/[^a-zA-Z0-9]/g, '')
+      if (ㄱ) await 값지우기(관리자키(ㄱ))
+      return 보내기({ 나감: true })
+    }
+
+    /* ── 관리자 : 비밀번호 없이 글 지우기 ── */
+    if (동작 === 'admin_remove') {
+      if (!(await 관리자인가(몸.열쇠))) return 오류('관리자만 할 수 있습니다.', 403)
+      const id = 아이디다듬기(몸.id)
+      const 글 = await 글꺼내기(id)
+      if (!글) return 오류('이미 지워진 글입니다.', 404)
+      await 글지우기(글)
+      return 보내기({ 지움: true })
+    }
+
+    /* ── 관리자 : 가려진 글 다시 보이게 하기 ── */
+    if (동작 === 'admin_show') {
+      if (!(await 관리자인가(몸.열쇠))) return 오류('관리자만 할 수 있습니다.', 403)
+      const id = 아이디다듬기(몸.id)
+      const 글 = await 글꺼내기(id)
+      if (!글) return 오류('없는 글입니다.', 404)
+      글.숨김 = false
+      글.신고 = 0
+      await 값넣기(글키(id), 글)
+      await 값지우기(신고키(id))
+      return 보내기({ 보임: true })
     }
 
     return 오류('없는 기능입니다 : ' + (동작 || '(빈 값)'), 404)

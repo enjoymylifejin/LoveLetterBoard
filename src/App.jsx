@@ -4,13 +4,14 @@
  * 로그인 없이, 이름 없이 마음을 남기는 곳입니다.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { 글목록 } from './lib/서버.js'
+import { 글목록, 관리자확인, 관리자나가기, 관리자글지우기, 관리자글보이기 } from './lib/서버.js'
 import { 흐른시간, 마음들 } from './lib/시각.js'
-import { 하트눌렀나, 내글인가 } from './lib/나.js'
+import { 하트눌렀나, 내글인가, 관리자열쇠, 관리자열쇠저장, 관리자열쇠지움 } from './lib/나.js'
 import { 마음딱지, 알림, 비었음 } from './components/공통.jsx'
 import 글쓰기 from './components/글쓰기.jsx'
 import 글상세 from './components/글상세.jsx'
 import 설치안내 from './components/설치안내.jsx'
+import 관리자 from './components/관리자.jsx'
 
 export default function App() {
   const [글들, 글들바꾸기] = useState([])
@@ -29,7 +30,8 @@ export default function App() {
   const [쓰기열림, 쓰기열림바꾸기] = useState(false)
   const [열린글, 열린글바꾸기] = useState(null)
   const [소식, 소식바꾸기] = useState('')
-  const [끝냄, 끝냄바꾸기] = useState(false)
+  const [관리자창, 관리자창바꾸기] = useState(false)
+  const [관리자임, 관리자임바꾸기] = useState(() => Boolean(관리자열쇠()))
 
   // 늦게 온 응답이 최신 목록을 덮어쓰지 않도록 순번을 매깁니다.
   const 세대 = useRef(0)
@@ -91,45 +93,42 @@ export default function App() {
     )
   }
 
-  /**
-   * 종료하기
-   * ------------------------------------------------------------
-   * 앱으로 설치해서 쓰는 중이면 창이 그대로 닫힙니다.
-   * 브라우저 탭에서는 규칙상 페이지가 스스로 탭을 닫을 수 없어서,
-   * 대신 작별 화면을 보여 주고 멈춥니다.
-   */
-  function 종료하기() {
-    if (!confirm('마음 우체통을 종료할까요?')) return
-    끝냄바꾸기(true)
+  /** 관리자 : 어떤 글이든 지웁니다. */
+  async function 관리자지우기(ㄱ, 일) {
+    일.stopPropagation()
+    if (!confirm('이 글을 지울까요?' + String.fromCharCode(10) + '되돌릴 수 없습니다.')) return
     try {
-      window.close()
-    } catch {
-      /* 못 닫아도 아래 작별 화면이 뜹니다. */
+      await 관리자글지우기(ㄱ.id)
+      글지워짐(ㄱ.id)
+    } catch (ㅇ) {
+      잘못바꾸기(ㅇ.message)
     }
   }
 
-  if (끝냄) {
-    return (
-      <div className="감싸기">
-        <div className="작별">
-          <div className="그림">💌</div>
-          <h2>안녕히 가세요</h2>
-          <p className="흐리게">
-            남겨 주신 마음은 잘 보관해 둘게요.
-            <br />
-            창을 닫으셔도 됩니다.
-          </p>
-          <button
-            className="단추 주"
-            style={{ marginTop: 16 }}
-            onClick={() => 끝냄바꾸기(false)}
-            type="button"
-          >
-            다시 열기
-          </button>
-        </div>
-      </div>
-    )
+  /** 관리자 : 신고로 가려진 글을 다시 보이게 합니다. */
+  async function 관리자되살리기(ㄱ, 일) {
+    일.stopPropagation()
+    try {
+      await 관리자글보이기(ㄱ.id)
+      글들바꾸기((이전) =>
+        이전.map((ㄴ) => (ㄴ.id === ㄱ.id ? { ...ㄴ, 숨김: false, 신고: 0 } : ㄴ))
+      )
+      소식바꾸기('다시 보이게 했습니다.')
+      setTimeout(() => 소식바꾸기(''), 2600)
+    } catch (ㅇ) {
+      잘못바꾸기(ㅇ.message)
+    }
+  }
+
+  async function 관리자나감() {
+    try {
+      await 관리자나가기()
+    } catch {
+      /* 서버에서 못 지워도 이 기기에서는 나갑니다. */
+    }
+    관리자열쇠지움()
+    관리자임바꾸기(false)
+    불러오기()
   }
 
   function 글지워짐(id) {
@@ -143,9 +142,16 @@ export default function App() {
   return (
     <div className="감싸기">
       <header className="머리">
-        <button className="종료단추" onClick={종료하기} type="button">
-          <span aria-hidden="true">✕</span> 종료
-        </button>
+        {!관리자임 && (
+          <button
+            className="관리자단추"
+            onClick={() => 관리자창바꾸기(true)}
+            type="button"
+            title="관리자"
+          >
+            🔑
+          </button>
+        )}
         <h1>💌 마음 우체통</h1>
         <p className="풀이">
           이름 없이 남기는 마음. 지금까지 {전체}통의 편지가 도착했어요.
@@ -196,6 +202,15 @@ export default function App() {
         ))}
       </div>
 
+      {관리자임 && (
+        <div className="관리자띠">
+          <span>🔑 관리자 모드 — 어떤 글이든 지울 수 있습니다</span>
+          <button className="단추 작게" onClick={관리자나감} type="button">
+            나가기
+          </button>
+        </div>
+      )}
+
       <설치안내 />
 
       <알림 종류="나쁨">{잘못}</알림>
@@ -232,6 +247,11 @@ export default function App() {
                 내 글
               </span>
             )}
+            {ㄱ.숨김 && (
+              <span className="받는이" style={{ background: '#ffe1e1', color: '#c62a55' }}>
+                가려짐 · 신고 {ㄱ.신고 || 0}
+              </span>
+            )}
             <span className="때">{흐른시간(ㄱ.만든시각)}</span>
           </div>
 
@@ -246,6 +266,27 @@ export default function App() {
               {하트눌렀나(ㄱ.id) ? '💗' : '🤍'} {ㄱ.하트 || 0}
             </span>
             <span>💬 {ㄱ.댓글수 || 0}</span>
+
+            {관리자임 && (
+              <span className="관리자칸">
+                {ㄱ.숨김 && (
+                  <button
+                    className="단추 작게"
+                    onClick={(일) => 관리자되살리기(ㄱ, 일)}
+                    type="button"
+                  >
+                    되살리기
+                  </button>
+                )}
+                <button
+                  className="단추 작게 지움"
+                  onClick={(일) => 관리자지우기(ㄱ, 일)}
+                  type="button"
+                >
+                  🗑 지우기
+                </button>
+              </span>
+            )}
           </div>
         </article>
       ))}
@@ -283,6 +324,20 @@ export default function App() {
             태그바꾸기('')
             찾기칸바꾸기('')
             찾기바꾸기('')
+            불러오기()
+          }}
+        />
+      )}
+
+      {관리자창 && (
+        <관리자
+          닫기={() => 관리자창바꾸기(false)}
+          들어갔을때={(열쇠) => {
+            관리자열쇠저장(열쇠)
+            관리자임바꾸기(true)
+            관리자창바꾸기(false)
+            소식바꾸기('관리자로 들어왔습니다.')
+            setTimeout(() => 소식바꾸기(''), 2600)
             불러오기()
           }}
         />

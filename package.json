@@ -10,7 +10,8 @@
     "preview": "vite preview --port 4174",
     "서버": "node 로컬서버.mjs",
     "점검": "node 점검.mjs",
-    "화면점검": "node 화면점검.mjs"
+    "화면점검": "node 화면점검.mjs",
+    "관리자점검": "node 관리자점검.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^11.0.2",

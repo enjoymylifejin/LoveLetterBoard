@@ -9,6 +9,7 @@
 const 손님키 = 'maeum-guest'
 const 내글키 = 'maeum-mine'
 const 하트키 = 'maeum-hearts'
+const 관리자열쇠키 = 'maeum-admin'
 
 function 무작위() {
   const ㄱ = new Uint8Array(16)
@@ -56,6 +57,30 @@ export function 내글기억(id) {
 }
 export function 내글잊기(id) {
   쓰기(내글키, 읽기(내글키).filter((ㄱ) => ㄱ !== id))
+}
+
+/* ── 관리자 열쇠 ────────────────────────────────────
+   서버가 준 열쇠만 들고 있습니다. 비밀번호는 저장하지 않습니다. */
+export function 관리자열쇠() {
+  try {
+    return localStorage.getItem(관리자열쇠키) || ''
+  } catch {
+    return globalThis.__관리자열쇠 || ''
+  }
+}
+export function 관리자열쇠저장(열쇠) {
+  try {
+    localStorage.setItem(관리자열쇠키, 열쇠)
+  } catch {
+    globalThis.__관리자열쇠 = 열쇠
+  }
+}
+export function 관리자열쇠지움() {
+  try {
+    localStorage.removeItem(관리자열쇠키)
+  } catch {
+    globalThis.__관리자열쇠 = ''
+  }
 }
 
 /* ── 하트 누른 글 기억하기 (서버가 진짜 판단, 이건 화면 표시용) ── */

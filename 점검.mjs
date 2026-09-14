@@ -253,6 +253,103 @@ try {
     const ㄱ = await 부르기('list', { 검색: { from: '-99', sort: '이상한값' } })
     확인('이상한 검색값에도 목록이 나온다', ㄱ.코드 === 200 && Array.isArray(ㄱ.값?.글들))
   }
+
+  /* ── [10] 관리자 ── */
+  console.log(줄바꿈 + '[10] 관리자')
+  let 열쇠 = null
+  {
+    const ㄱ = await 부르기('admin_in', { 몸: { 비번: '9999' } })
+    확인('틀린 관리자 비번은 막힌다', ㄱ.코드 === 403, JSON.stringify(ㄱ.값))
+  }
+  {
+    const ㄱ = await 부르기('admin_in', { 몸: { 비번: '2580' } })
+    확인('2580 으로 관리자에 들어간다', ㄱ.코드 === 200 && !!ㄱ.값?.열쇠, JSON.stringify(ㄱ.값))
+    열쇠 = ㄱ.값?.열쇠
+    확인('열쇠가 추측하기 어렵게 길다', (열쇠 || '').length >= 40, '길이 ' + (열쇠 || '').length)
+  }
+  {
+    const ㄱ = await 부르기('admin_check', { 몸: { 열쇠 } })
+    확인('관리자 열쇠가 확인된다', ㄱ.값?.관리자 === true, JSON.stringify(ㄱ.값))
+  }
+  {
+    const ㄱ = await 부르기('admin_check', { 몸: { 열쇠: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } })
+    확인('가짜 열쇠는 안 통한다', ㄱ.값?.관리자 === false, JSON.stringify(ㄱ.값))
+  }
+
+  // 남이 쓴 글을 관리자가 지울 수 있어야 합니다.
+  let 남의글 = null
+  {
+    const ㄱ = await 부르기('write', {
+      몸: {
+        손님: 'other' + Math.random().toString(36).slice(2, 12),
+        내용: '관리자가 지울 남의 글입니다.',
+        태그: 'seolem',
+        비번: '7777',
+      },
+    })
+    남의글 = ㄱ.값?.id
+    확인('남의 글을 하나 썼다', !!남의글)
+  }
+  {
+    const ㄱ = await 부르기('admin_remove', { 몸: { 열쇠: '', id: 남의글 } })
+    확인('열쇠 없이는 못 지운다', ㄱ.코드 === 403, JSON.stringify(ㄱ.값))
+  }
+  {
+    const ㄱ = await 부르기('admin_remove', { 몸: { 열쇠, id: 남의글 } })
+    확인('관리자는 비번 없이 지운다', ㄱ.코드 === 200 && ㄱ.값?.지움, JSON.stringify(ㄱ.값))
+  }
+  {
+    const ㄱ = await 부르기('list')
+    확인('지운 글이 목록에서 빠진다', !(ㄱ.값?.글들 || []).some((ㄴ) => ㄴ.id === 남의글))
+  }
+
+  // 신고로 가려진 글을 관리자는 보고, 되살릴 수 있어야 합니다.
+  let 가린글 = null
+  {
+    const ㄱ = await 부르기('write', {
+      몸: {
+        손님: 'hid' + Math.random().toString(36).slice(2, 12),
+        내용: '신고로 가려질 글입니다.',
+        태그: 'seolem',
+        비번: '8888',
+      },
+    })
+    가린글 = ㄱ.값?.id
+    for (let i = 1; i <= 3; i++) {
+      await 부르기('report', {
+        몸: { 손님: 'hr' + i + Math.random().toString(36).slice(2, 10), id: 가린글 },
+      })
+    }
+    const ㄴ = await 부르기('list')
+    확인('가려진 글은 보통 목록에 없다', !(ㄴ.값?.글들 || []).some((ㄷ) => ㄷ.id === 가린글))
+  }
+  {
+    const ㄱ = await 부르기('list', { 검색: { key: 열쇠 } })
+    const 찾음 = (ㄱ.값?.글들 || []).find((ㄴ) => ㄴ.id === 가린글)
+    확인('관리자 목록에는 가려진 글도 나온다', !!찾음, JSON.stringify(ㄱ.값?.글들?.length))
+    확인('가려짐 표시와 신고 수가 함께 온다', 찾음?.숨김 === true && 찾음?.신고 >= 3, JSON.stringify(찾음))
+  }
+  {
+    const ㄱ = await 부르기('post', { 검색: { id: 가린글 } })
+    확인('가려진 글은 보통 열리지 않는다', ㄱ.코드 === 403, String(ㄱ.코드))
+    const ㄴ = await 부르기('post', { 검색: { id: 가린글, key: 열쇠 } })
+    확인('관리자는 가려진 글을 연다', ㄴ.코드 === 200 && !!ㄴ.값?.글, String(ㄴ.코드))
+  }
+  {
+    const ㄱ = await 부르기('admin_show', { 몸: { 열쇠, id: 가린글 } })
+    확인('관리자가 다시 보이게 한다', ㄱ.코드 === 200 && ㄱ.값?.보임, JSON.stringify(ㄱ.값))
+    const ㄴ = await 부르기('list')
+    확인('되살린 글이 목록에 돌아온다', (ㄴ.값?.글들 || []).some((ㄷ) => ㄷ.id === 가린글))
+    await 부르기('admin_remove', { 몸: { 열쇠, id: 가린글 } })
+  }
+  {
+    const ㄱ = await 부르기('admin_out', { 몸: { 열쇠 } })
+    확인('관리자에서 나간다', ㄱ.코드 === 200)
+    const ㄴ = await 부르기('admin_check', { 몸: { 열쇠 } })
+    확인('나간 뒤 열쇠는 못 쓴다', ㄴ.값?.관리자 === false, JSON.stringify(ㄴ.값))
+    const ㄷ = await 부르기('admin_remove', { 몸: { 열쇠, id: 'whatever' } })
+    확인('나간 뒤에는 못 지운다', ㄷ.코드 === 403, String(ㄷ.코드))
+  }
 } catch (ㅇ) {
   확인('점검이 끝까지 돌았다', false, ㅇ.message)
 }
